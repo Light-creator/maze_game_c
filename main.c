@@ -28,6 +28,8 @@ void process_input(global_t* state);
 void update(global_t* state);
 void render(global_t* state);
 
+void restart_game(global_t* state);
+
 int main(int argc, char** argv) {
   if(argc < 3) {
     fprintf(stderr, "Usage: ./main <maze_width> <maze_height>");
@@ -47,7 +49,6 @@ int main(int argc, char** argv) {
     update(&state); 
     render(&state);
   }
-
 
   SDL_DestroyWindow(state.window_);
   SDL_DestroyRenderer(state.renderer_);
@@ -95,6 +96,9 @@ void update(global_t* state) {
 
   state->rect_.x += state->rect_.x_d * MOVE_SPEED;
   state->rect_.y += state->rect_.y_d * MOVE_SPEED;
+  
+  if(state->player_.x_ == state->maze_.cols_-1 
+    && state->player_.y_ == state->maze_.rows_-1) restart_game(state);
 
   // clear rect
   state->rect_.x_d = 0;
@@ -167,4 +171,17 @@ int init_sdl(global_t* state) {
   }
 
   return 0;
+}
+
+void restart_game(global_t* state) {
+  size_t cols = state->maze_.cols_;
+  size_t rows = state->maze_.rows_;
+
+  free_maze(&state->maze_);
+
+  state->maze_ = create_maze(rows, cols);
+  generate_maze(&state->maze_);
+  
+  state->player_.x_ = 0;
+  state->player_.y_ = 0;
 }

@@ -19,5 +19,5 @@ clean:
 all: clean build
 
 run:
-	$(OUT) 15 10
+	$(OUT) 5 5
 

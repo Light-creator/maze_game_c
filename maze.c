@@ -76,32 +76,27 @@ dir_t get_direction(maze_t* maze, int x, int y) {
 }
 
 void recursive_backtracking(maze_t* maze, size_t x, size_t y) {
-  printf("(%lu %lu) -> ", x, y);
   dir_t dir = get_direction(maze, x, y);
-  // dir_t dir = DOWN_;
+  
   MAZE_PTR_AT(maze, y, x)->visited_ = true;
   while(dir != NONE_) {
     switch(dir) {
       case UP_:
-        printf("UP ");
         MAZE_PTR_AT(maze, y, x)->walls_[UP_] = false;
         MAZE_PTR_AT(maze, y-1, x)->walls_[DOWN_] = false;
         recursive_backtracking(maze, x, y-1);
         break;
       case DOWN_:
-        printf("DOWN ");
         MAZE_PTR_AT(maze, y+1, x)->walls_[UP_] = false;
         MAZE_PTR_AT(maze, y, x)->walls_[DOWN_] = false;
         recursive_backtracking(maze, x, y+1);
         break;
       case RIGHT_:
-        printf("RIGHT ");
         MAZE_PTR_AT(maze, y, x)->walls_[RIGHT_] = false;
         MAZE_PTR_AT(maze, y, x+1)->walls_[LEFT_] = false;
         recursive_backtracking(maze, x+1, y);
         break;
       case LEFT_:
-        printf("LEFT ");
         MAZE_PTR_AT(maze, y, x)->walls_[LEFT_] = false;
         MAZE_PTR_AT(maze, y, x-1)->walls_[RIGHT_] = false;
         recursive_backtracking(maze, x-1, y);
@@ -114,7 +109,6 @@ void recursive_backtracking(maze_t* maze, size_t x, size_t y) {
 }
 
 void generate_maze(maze_t* maze) {
-  printf("start\n");
   recursive_backtracking(maze, 0, 0);
 }
 
