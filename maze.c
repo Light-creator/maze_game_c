@@ -19,11 +19,14 @@ cell_t* create_cell(size_t x, size_t y) {
   return cell;
 }
 
-maze_t create_maze(size_t cols, size_t rows) {
+maze_t create_maze(size_t cols, size_t rows, size_t start_off_x, size_t start_off_y) {
   maze_t maze;
   maze.cols_ = cols;
   maze.rows_ = rows;
   maze.cells_ = (cell_t**)malloc(sizeof(cell_t*)*cols*rows);
+
+  maze.start_offset_x_ = start_off_x;
+  maze.start_offset_y_ = start_off_y;
   
   for(int i=0; i<rows; i++) {
     for(int j=0; j<cols; j++)
@@ -116,25 +119,42 @@ void render_maze(SDL_Renderer* renderer, maze_t* maze) {
   size_t cell_size = MIN(SCREEN_WIDTH, SCREEN_HEIGHT) / MAX(maze->cols_, maze->rows_);
   
   SDL_SetRenderDrawColor(renderer, 255,181,192, 255);
-  SDL_Rect start_point = { 0, 0, cell_size, cell_size };
-  SDL_Rect finish_point = { (maze->cols_-1)*cell_size, (maze->rows_-1)*cell_size, cell_size, cell_size };
+  
+  SDL_Rect start_point = { 
+    maze->start_offset_x_, 
+    maze->start_offset_y_, 
+    cell_size, 
+    cell_size 
+  };
+
+  SDL_Rect finish_point = { 
+    maze->start_offset_x_+(maze->cols_-1)*cell_size, 
+    maze->start_offset_y_+(maze->rows_-1)*cell_size, 
+    cell_size, 
+    cell_size 
+  };
+
   SDL_RenderFillRect(renderer, &start_point);
   SDL_RenderFillRect(renderer, &finish_point);
 
   SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+  
+  int o_x = maze->start_offset_x_;
+  int o_y = maze->start_offset_y_;
+
   for(int i=0; i<maze->rows_; i++) {
     for(int j=0; j<maze->cols_; j++) {
       if(MAZE_PTR_AT(maze, i, j)->walls_[UP_]) {
-        SDL_RenderDrawLine(renderer, j*cell_size, i*cell_size, (j+1)*cell_size, i*cell_size);
+        SDL_RenderDrawLine(renderer, o_x+j*cell_size, o_y+i*cell_size, o_x+(j+1)*cell_size, o_y+i*cell_size);
       }
       if(MAZE_PTR_AT(maze, i, j)->walls_[DOWN_]) {
-        SDL_RenderDrawLine(renderer, j*cell_size, (i+1)*cell_size, (j+1)*cell_size, (i+1)*cell_size);
+        SDL_RenderDrawLine(renderer, o_x+j*cell_size, o_y+(i+1)*cell_size, o_x+(j+1)*cell_size, o_y+(i+1)*cell_size);
       }
       if(MAZE_PTR_AT(maze, i, j)->walls_[RIGHT_]) {
-        SDL_RenderDrawLine(renderer, (j+1)*cell_size, i*cell_size, (j+1)*cell_size, (i+1)*cell_size);
+        SDL_RenderDrawLine(renderer, o_x+(j+1)*cell_size, o_y+i*cell_size, o_x+(j+1)*cell_size, o_y+(i+1)*cell_size);
       }
       if(MAZE_PTR_AT(maze, i, j)->walls_[LEFT_]) {
-        SDL_RenderDrawLine(renderer, j*cell_size, i*cell_size, j*cell_size, (i+1)*cell_size);
+        SDL_RenderDrawLine(renderer, o_x+j*cell_size, o_y+i*cell_size, o_x+j*cell_size, o_y+(i+1)*cell_size);
       }
     }
   }

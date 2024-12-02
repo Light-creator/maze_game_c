@@ -134,10 +134,21 @@ int init_state(global_t* state) {
 int init_maze(global_t* state, size_t cols, size_t rows) {
   size_t cell_size = MIN(SCREEN_WIDTH, SCREEN_HEIGHT) / MAX(cols, rows);
 
-  state->maze_ = create_maze(cols, rows);
+  int diff_y = SCREEN_HEIGHT / cell_size - rows;
+  int diff_x = SCREEN_WIDTH / cell_size - cols;
+  
+  size_t start_offset_y = diff_y > 0 ? diff_y*cell_size/2: 0;
+  size_t start_offset_x = diff_x > 0 ? diff_x*cell_size/2: 0;
+
+  printf("diff_x: %d, diff_y: %d | o_x: %lu, o_y: %lu\n", diff_x, diff_y, start_offset_x, start_offset_y);
+
+  state->maze_ = create_maze(cols, rows, start_offset_x, start_offset_y);
   generate_maze(&state->maze_);
   
-  state->player_ = create_player(cell_size, 0, 0);
+  state->player_ = create_player(cell_size, 0, 0, start_offset_x, start_offset_y);
+
+  state->start_offset_x_ = start_offset_x;
+  state->start_offset_y_ = start_offset_y;
 
   return 0;
 }
@@ -179,7 +190,7 @@ void restart_game(global_t* state) {
 
   free_maze(&state->maze_);
 
-  state->maze_ = create_maze(rows, cols);
+  state->maze_ = create_maze(cols, rows, state->start_offset_x_, state->start_offset_y_);
   generate_maze(&state->maze_);
   
   state->player_.x_ = 0;

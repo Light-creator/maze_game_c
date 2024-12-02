@@ -26,9 +26,12 @@ typedef struct maze_t_ {
   size_t cols_;
   size_t rows_;
   cell_t** cells_;
+
+  size_t start_offset_x_;
+  size_t start_offset_y_;
 } maze_t;
 
-maze_t create_maze(size_t cols, size_t rows);
+maze_t create_maze(size_t cols, size_t rows, size_t start_off_x, size_t start_off_y);
 void free_maze(maze_t* maze);
 
 void recursive_backtracking(maze_t* maze, size_t x, size_t y);

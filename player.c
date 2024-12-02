@@ -6,11 +6,13 @@
 #define MAZE_PTR_AT(m, i, j) (m)->cells_[(i)*(m)->cols_ + (j)]
 #define MAZE_STATIC_AT(m, i, j) (m).cells_[(i)*(m).cols_ + (j)]
 
-player_t create_player(size_t sz, size_t x, size_t y) {
+player_t create_player(size_t sz, size_t x, size_t y, size_t start_off_x, size_t start_off_y) {
   player_t player;
   player.sz_ = sz;
   player.x_ = x;
   player.y_ = y;
+  player.start_offset_x_ = start_off_x;
+  player.start_offset_y_ = start_off_y;
 
   return player;
 }
@@ -26,7 +28,13 @@ void update_player(player_t* player, maze_t* maze, int x, int y) {
 
 void render_player(SDL_Renderer* renderer, player_t* player) {
   SDL_SetRenderDrawColor(renderer, 52, 21, 57, 255);
-  SDL_Rect player_rect = {player->x_*player->sz_, player->y_*player->sz_, player->sz_, player->sz_};
+  
+  SDL_Rect player_rect = {
+    player->start_offset_x_+player->x_*player->sz_, 
+    player->start_offset_y_+player->y_*player->sz_, 
+    player->sz_, 
+    player->sz_
+  };
 
   SDL_RenderFillRect(renderer, &player_rect);
 }

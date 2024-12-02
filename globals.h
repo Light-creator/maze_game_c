@@ -26,6 +26,9 @@ typedef struct global_t_ {
 
   bool game_runnning_;
   uint32_t last_frame_time_;
+
+  size_t start_offset_x_;
+  size_t start_offset_y_;
 } global_t;
 
 
