@@ -1,6 +1,6 @@
 CC = gcc
 
-FLAGS = -lSDL2 -g
+FLAGS = -lSDL2
 
 OUT = ./main
 
@@ -9,6 +9,8 @@ SRCS = \
 			 maze.c \
 			 player.c
 
+build_optimized:
+	$(CC) $(SRCS) -O2 -o $(OUT) $(FLAGS)
 
 build: 
 	$(CC) $(SRCS) -o $(OUT) $(FLAGS)

@@ -1,13 +1,17 @@
 #include "maze.h"
+#include "stack.h"
 
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #define MAZE_PTR_AT(m, i, j) (m)->cells_[(i)*(m)->cols_ + (j)]
 #define MAZE_STATIC_AT(m, i, j) (m).cells_[(i)*(m).cols_ + (j)]
 
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
+
+#define OPTIMIZED 1
 
 cell_t* create_cell(size_t x, size_t y) {
   cell_t* cell = (cell_t*)malloc(sizeof(cell_t));
@@ -45,6 +49,21 @@ void free_maze(maze_t* maze) {
   free(maze->cells_);
 }
 
+#ifdef OPTIMIZED
+inline bool is_valid_cell(maze_t* maze, int x, int y) {
+  if(x < 0 || x >= maze->cols_ || y < 0 || y >= maze->rows_) return false;
+  return !MAZE_PTR_AT(maze, y, x)->visited_;
+}
+
+inline void shuffle_arr(dir_t* arr, int sz) {
+  for(int i=0; i<sz; i++) {
+    int rand_idx = rand()%sz;
+    dir_t tmp = arr[rand_idx];
+    arr[rand_idx] = arr[i];
+    arr[i] = tmp;
+  }
+}
+#else
 bool is_valid_cell(maze_t* maze, int x, int y) {
   if(x < 0 || x >= maze->cols_ || y < 0 || y >= maze->rows_) return false;
   return !MAZE_PTR_AT(maze, y, x)->visited_;
@@ -58,6 +77,7 @@ void shuffle_arr(dir_t* arr, int sz) {
     arr[i] = tmp;
   }
 }
+#endif
 
 dir_t get_direction(maze_t* maze, int x, int y) {
   // DOWN_, UP_, RIGHT_, LEFT_
@@ -76,6 +96,51 @@ dir_t get_direction(maze_t* maze, int x, int y) {
   }
 
   return NONE_;
+}
+
+
+void iterative_backtracking(maze_t* maze, size_t x, size_t y) {
+  size_t prev_x = x, prev_y = y;
+  size_t count = maze->rows_*maze->cols_-1;
+  stack_t stack = create_stack(1024);
+  
+  while(count) {
+    MAZE_PTR_AT(maze, y, x)->visited_ = true;
+    dir_t dir = get_direction(maze, x, y);
+    if(dir != NONE_) {
+      push_stack(&stack, MAZE_PTR_AT(maze, y, x));
+      count--;
+    }
+
+    switch(dir) {
+      case UP_:
+        MAZE_PTR_AT(maze, y, x)->walls_[UP_] = false;
+        MAZE_PTR_AT(maze, y-1, x)->walls_[DOWN_] = false;
+        y--;
+        break;
+      case DOWN_:
+        MAZE_PTR_AT(maze, y+1, x)->walls_[UP_] = false;
+        MAZE_PTR_AT(maze, y, x)->walls_[DOWN_] = false;
+        y++;
+        break;
+      case RIGHT_:
+        MAZE_PTR_AT(maze, y, x)->walls_[RIGHT_] = false;
+        MAZE_PTR_AT(maze, y, x+1)->walls_[LEFT_] = false;
+        x++;
+        break;
+      case LEFT_:
+        MAZE_PTR_AT(maze, y, x)->walls_[LEFT_] = false;
+        MAZE_PTR_AT(maze, y, x-1)->walls_[RIGHT_] = false;
+        x--;
+        break;
+      case NONE_:
+        x = stack.cells_[stack.sz_-1]->x_;
+        y = stack.cells_[stack.sz_-1]->y_;
+        pop_stack(&stack);
+        break;
+      default: break;
+    }
+  }
 }
 
 void recursive_backtracking(maze_t* maze, size_t x, size_t y) {
@@ -112,8 +177,14 @@ void recursive_backtracking(maze_t* maze, size_t x, size_t y) {
 }
 
 void generate_maze(maze_t* maze) {
+#ifdef OPTIMIZED 
+  iterative_backtracking(maze, 0, 0);
+#else
   recursive_backtracking(maze, 0, 0);
+#endif
 }
+
+static bool flag = true;
 
 void render_maze(SDL_Renderer* renderer, maze_t* maze) {
   size_t cell_size = MIN(SCREEN_WIDTH, SCREEN_HEIGHT) / MAX(maze->cols_, maze->rows_);
@@ -142,21 +213,67 @@ void render_maze(SDL_Renderer* renderer, maze_t* maze) {
   int o_x = maze->start_offset_x_;
   int o_y = maze->start_offset_y_;
 
+  clock_t begin = clock();
+#ifdef OPTIMIZED
   for(int i=0; i<maze->rows_; i++) {
+    int idx_y_first = o_y+i*cell_size;
+    int idx_y_second = o_y+(i+1)*cell_size;
     for(int j=0; j<maze->cols_; j++) {
       if(MAZE_PTR_AT(maze, i, j)->walls_[UP_]) {
-        SDL_RenderDrawLine(renderer, o_x+j*cell_size, o_y+i*cell_size, o_x+(j+1)*cell_size, o_y+i*cell_size);
-      }
-      if(MAZE_PTR_AT(maze, i, j)->walls_[DOWN_]) {
-        SDL_RenderDrawLine(renderer, o_x+j*cell_size, o_y+(i+1)*cell_size, o_x+(j+1)*cell_size, o_y+(i+1)*cell_size);
-      }
-      if(MAZE_PTR_AT(maze, i, j)->walls_[RIGHT_]) {
-        SDL_RenderDrawLine(renderer, o_x+(j+1)*cell_size, o_y+i*cell_size, o_x+(j+1)*cell_size, o_y+(i+1)*cell_size);
+        SDL_RenderDrawLine(renderer, o_x+j*cell_size, idx_y_first, o_x+(j+1)*cell_size, idx_y_first);
       }
       if(MAZE_PTR_AT(maze, i, j)->walls_[LEFT_]) {
-        SDL_RenderDrawLine(renderer, o_x+j*cell_size, o_y+i*cell_size, o_x+j*cell_size, o_y+(i+1)*cell_size);
+        SDL_RenderDrawLine(renderer, o_x+j*cell_size, idx_y_first, o_x+j*cell_size, idx_y_second);
       }
     }
+  }
+
+  int last_col = maze->cols_-1;
+  for(int i=0; i<maze->rows_; i++) {
+    if(MAZE_PTR_AT(maze, i, last_col)->walls_[RIGHT_]) {
+      SDL_RenderDrawLine(renderer, o_x+(last_col+1)*cell_size, o_y+i*cell_size, o_x+(last_col+1)*cell_size, o_y+(i+1)*cell_size);
+    }
+  }
+
+  int last_row = maze->rows_-1;
+  for(int j=0; j<maze->cols_; j++) {
+    if(MAZE_PTR_AT(maze, last_row, j)->walls_[DOWN_]) {
+      SDL_RenderDrawLine(renderer, o_x+j*cell_size, o_y+(last_row+1)*cell_size, o_x+(j+1)*cell_size, o_y+(last_row+1)*cell_size);
+    }
+  }
+
+#else
+  for(int i=0; i<maze->cols_; i++) {
+    for(int j=0; j<maze->rows_; j++) {
+      int idx_x_first = o_x+i*cell_size;
+      int idx_y_first = o_y+j*cell_size;
+      int idx_x_second = o_x+(i+1)*cell_size;
+      int idx_y_second = o_y+(j+1)*cell_size;
+
+      if(MAZE_PTR_AT(maze, j, i)->walls_[UP_]) {
+        SDL_RenderDrawLine(renderer, idx_x_first, idx_y_first, idx_x_second, idx_y_first);
+      }
+      if(MAZE_PTR_AT(maze, j, i)->walls_[DOWN_]) {
+        SDL_RenderDrawLine(renderer, idx_x_first, idx_y_second, idx_x_second, idx_y_second);
+      }
+      if(MAZE_PTR_AT(maze, j, i)->walls_[RIGHT_]) {
+        SDL_RenderDrawLine(renderer, idx_x_second, idx_y_first, idx_x_second, idx_y_second);
+      }
+      if(MAZE_PTR_AT(maze, j, i)->walls_[LEFT_]) {
+        SDL_RenderDrawLine(renderer, idx_x_first, idx_y_first, idx_x_first, idx_y_second);
+      }
+    }
+  }
+
+#endif
+
+
+  clock_t end = clock();
+  double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+  
+  if(flag) {
+    printf("Maze size of %lux%lu => Render time: %f\n", maze->rows_, maze->cols_, time_spent);
+    flag = false;
   }
 }
 
